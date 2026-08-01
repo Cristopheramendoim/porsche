@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Porsche Executive Strategy Dashboard</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        porsche: {
+                            red: '#D5001C',
+                            dark: '#0f0f11',
+                            card: '#1a1a1e',
+                            cardHover: '#222227',
+                            border: '#2a2a32'
+                        },
+                        canva: {
+                            purple: '#8b3dff',
+                            blue: '#00c4cc',
+                            yellow: '#ffc82c'
+                        }
+                    },
+                    boxShadow: {
+                        'glow-red': '0 0 20px rgba(213, 0, 28, 0.15)',
+                        'glow-yellow': '0 0 20px rgba(255, 200, 44, 0.15)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            background-color: #09090b;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(353,100%,42%,0.07) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, hsla(240,100%,10%,0.3) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #D5001C; }
+        
+        /* Animations */
+        .fade-up { animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; transform: translateY(20px); }
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+        
+        @keyframes fadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .glass-card {
+            background: rgba(26, 26, 30, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .canva-block {
+            border-radius: 1.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .canva-block:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body class="text-gray-200 antialiased selection:bg-porsche-red selection:text-white pb-20">
+
+    <header class="border-b border-white/10 bg-porsche-dark/50 sticky top-0 z-50 backdrop-blur-xl">
+        <div class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-2xl flex items-center justify-center border border-zinc-700 shadow-glow-red">
+                        <i class="fa-solid fa-shield-halved text-porsche-red text-3xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl md:text-3xl font-display font-bold text-white tracking-tight">Porsche Exec <span class="text-porsche-red">Report</span></h1>
+                        <p class="text-sm text-gray-400 font-medium">Análise de Vendas & Diretrizes (Base Dinâmica 2024-2027)</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 bg-zinc-900/50 px-4 py-2 rounded-xl border border-white/5">
+                    <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                    <span id="sync-badge-text" class="text-sm text-gray-300 font-medium">Dados Sincronizados (100 Regs)</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-8">
+        
+        <section class="glass-card canva-block p-5 fade-up relative z-40 border-t-4 border-t-gray-500">
+            <div class="flex items-center gap-2 mb-4">
+                <i class="fa-solid fa-filter text-gray-400"></i>
+                <h2 class="text-lg font-display font-bold text-white">Filtros Dinâmicos</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Ano Inicial</label>
+                    <select id="filter-start" class="w-full bg-zinc-900 border border-white/10 rounded-xl p-2.5 text-sm text-gray-300 focus:outline-none focus:border-porsche-red transition-colors appearance-none cursor-pointer">
+                        <option value="">Todos</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Ano Final</label>
+                    <select id="filter-end" class="w-full bg-zinc-900 border border-white/10 rounded-xl p-2.5 text-sm text-gray-300 focus:outline-none focus:border-porsche-red transition-colors appearance-none cursor-pointer">
+                        <option value="">Todos</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Modelo</label>
+                    <select id="filter-model" class="w-full bg-zinc-900 border border-white/10 rounded-xl p-2.5 text-sm text-gray-300 focus:outline-none focus:border-porsche-red transition-colors appearance-none cursor-pointer">
+                        <option value="">Todos os Modelos</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Cidade</label>
+                    <select id="filter-city" class="w-full bg-zinc-900 border border-white/10 rounded-xl p-2.5 text-sm text-gray-300 focus:outline-none focus:border-porsche-red transition-colors appearance-none cursor-pointer">
+                        <option value="">Todas as Cidades</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1 uppercase">Vendedor</label>
+                    <select id="filter-seller" class="w-full bg-zinc-900 border border-white/10 rounded-xl p-2.5 text-sm text-gray-300 focus:outline-none focus:border-porsche-red transition-colors appearance-none cursor-pointer">
+                        <option value="">Todos os Vendedores</option>
+                    </select>
+                </div>
+                <div>
+                    <button id="btn-clear-filters" class="w-full bg-white/5 hover:bg-porsche-red hover:text-white border border-white/10 hover:border-porsche-red rounded-xl p-2.5 text-sm font-bold text-gray-400 transition-all">
+                        Limpar Filtros
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 fade-up">
+            
+            <!-- KPI 1: Faturamento -->
+            <div class="glass-card canva-block p-6 relative overflow-hidden group border-t-4 border-t-porsche-red">
+                <div class="absolute -right-6 -top-6 w-24 h-24 bg-porsche-red/10 rounded-full blur-2xl group-hover:bg-porsche-red/20 transition-all"></div>
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Faturamento Global</h3>
+                    <div class="p-2 bg-porsche-red/10 rounded-lg text-porsche-red"><i class="fa-solid fa-sack-dollar text-xl"></i></div>
+                </div>
+                <div class="mt-2">
+                    <span class="text-4xl font-display font-extrabold text-white" id="kpi-revenue">$0.00M</span>
+                </div>
+                <p class="mt-3 text-sm font-medium text-emerald-400 bg-emerald-400/10 inline-block px-2 py-1 rounded-md">
+                    <i class="fa-solid fa-chart-line mr-1"></i> <span id="kpi-tx-count">0</span> transações totais
+                </p>
+            </div>
+
+            <!-- KPI 2: Ticket Médio -->
+            <div class="glass-card canva-block p-6 relative overflow-hidden group border-t-4 border-t-blue-500">
+                <div class="absolute -right-6 -top-6 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all"></div>
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Ticket Médio</h3>
+                    <div class="p-2 bg-blue-500/10 rounded-lg text-blue-400"><i class="fa-solid fa-tag text-xl"></i></div>
+                </div>
+                <div class="mt-2">
+                    <span class="text-4xl font-display font-extrabold text-white" id="kpi-avg-ticket">$0K</span>
+                </div>
+                <p class="mt-3 text-sm font-medium text-blue-400 bg-blue-400/10 inline-block px-2 py-1 rounded-md">
+                    <i class="fa-solid fa-car-side mr-1"></i> Valor por veículo
+                </p>
+            </div>
+
+            <!-- KPI 3: Vendas Concluídas -->
+            <div class="glass-card canva-block p-6 relative overflow-hidden group border-t-4 border-t-emerald-500">
+                <div class="absolute -right-6 -top-6 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all"></div>
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Veículos Entregues</h3>
+                    <div class="p-2 bg-emerald-500/10 rounded-lg text-emerald-400"><i class="fa-solid fa-check-double text-xl"></i></div>
+                </div>
+                <div class="mt-2 flex items-baseline gap-2">
+                    <span class="text-4xl font-display font-extrabold text-white" id="kpi-delivered-revenue">$0M</span>
+                </div>
+                <p class="mt-3 text-sm font-medium text-emerald-400 bg-emerald-400/10 inline-block px-2 py-1 rounded-md">
+                    <i class="fa-solid fa-truck-fast mr-1"></i> <span id="kpi-delivered-count">0</span> unidades entregues
+                </p>
+            </div>
+
+            <!-- KPI 4: Qualidade -->
+            <div class="glass-card canva-block p-6 relative overflow-hidden group border-t-4 border-t-canva-purple">
+                <div class="absolute -right-6 -top-6 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all"></div>
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Qualidade CRM</h3>
+                    <div class="p-2 bg-purple-500/10 rounded-lg text-purple-400"><i class="fa-solid fa-database text-xl"></i></div>
+                </div>
+                <div class="mt-2 flex items-baseline gap-2">
+                    <span class="text-4xl font-display font-extrabold text-white" id="kpi-quality-pct">0%</span>
+                </div>
+                <p class="mt-3 text-sm font-medium text-purple-400 bg-purple-400/10 inline-block px-2 py-1 rounded-md">
+                    <span id="kpi-valid-dates">0</span> datas válidas extraídas
+                </p>
+            </div>
+        </section>
+
+        <section class="fade-up delay-100">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 rounded-full bg-canva-yellow/20 flex items-center justify-center">
+                    <i class="fa-solid fa-crown text-canva-yellow text-sm"></i>
+                </div>
+                <h2 class="text-2xl font-display font-bold text-white">Quem vendeu mais? <span class="text-gray-500 font-medium text-lg ml-2">Melhores Vendedores</span></h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Podio -->
+                <div class="lg:col-span-1 space-y-4">
+                    <!-- Rei do Faturamento -->
+                    <div class="bg-gradient-to-br from-zinc-800 to-zinc-900 border border-canva-yellow/30 p-6 rounded-2xl shadow-glow-yellow relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-canva-yellow/10 rounded-full -mr-10 -mt-10 blur-xl"></div>
+                        <span class="bg-canva-yellow text-black text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-4 inline-block">1º em Faturamento</span>
+                        <h4 class="text-3xl font-display font-bold text-white mb-1" id="top-revenue-name">Carregando...</h4>
+                        <p class="text-sm text-gray-400 mb-4">Maior arrecadação financeira gerada.</p>
+                        <div class="text-3xl font-bold text-canva-yellow font-display" id="top-revenue-val">$0</div>
+                    </div>
+                    
+                    <!-- Rei do Volume -->
+                    <div class="bg-gradient-to-br from-zinc-800 to-zinc-900 border border-blue-500/30 p-6 rounded-2xl relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -mr-10 -mt-10 blur-xl"></div>
+                        <span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest mb-4 inline-block">1º em Volume</span>
+                        <h4 class="text-3xl font-display font-bold text-white mb-1" id="top-volume-name">Carregando...</h4>
+                        <p class="text-sm text-gray-400 mb-4">Maior quantidade de veículos vendidos.</p>
+                        <div class="text-3xl font-bold text-blue-400 font-display"><span id="top-volume-val">0</span> <span class="text-lg font-medium text-gray-500">veículos</span></div>
+                    </div>
+                </div>
+
+                <!-- Tabela Completa -->
+                <div class="lg:col-span-2 glass-card canva-block rounded-2xl overflow-hidden flex flex-col">
+                    <div class="p-5 border-b border-white/5 bg-white/5">
+                        <h3 class="text-lg font-bold text-white">Ranking Completo da Equipe</h3>
+                    </div>
+                    <div class="overflow-x-auto overflow-y-auto max-h-[340px] custom-scrollbar p-2">
+                        <table class="w-full text-left text-sm text-gray-300 border-separate border-spacing-y-1">
+                            <thead class="text-xs uppercase text-gray-500 sticky top-0 bg-[#1e1e24] z-10">
+                                <tr>
+                                    <th class="px-4 py-3 font-semibold rounded-l-lg">Posição</th>
+                                    <th class="px-4 py-3 font-semibold">Vendedor</th>
+                                    <th class="px-4 py-3 font-semibold text-center">Unidades</th>
+                                    <th class="px-4 py-3 font-semibold text-right rounded-r-lg">Faturamento</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sellers-tbody">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 fade-up delay-200">
+            
+            <!-- Chart: Evolução -->
+            <div class="glass-card canva-block p-6">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h3 class="text-xl font-display font-bold text-white">Evolução e Volume (Por Ano)</h3>
+                        <p class="text-sm text-gray-400 mt-1">Comparativo de Arrecadação vs Qtd de Vendas</p>
+                    </div>
+                    <div class="bg-white/5 p-2 rounded-lg"><i class="fa-solid fa-chart-area text-porsche-red"></i></div>
+                </div>
+                <div class="relative h-72 w-full">
+                    <canvas id="evolutionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart: Localização -->
+            <div class="glass-card canva-block p-6">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h3 class="text-xl font-display font-bold text-white">Arrecadação por Cidade</h3>
+                        <p class="text-sm text-gray-400 mt-1">Faturamento e volume total por município</p>
+                    </div>
+                    <div class="bg-white/5 p-2 rounded-lg"><i class="fa-solid fa-map-location-dot text-blue-400"></i></div>
+                </div>
+                <div class="relative h-72 w-full">
+                    <canvas id="statesChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart: Modelos -->
+            <div class="glass-card canva-block p-6">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h3 class="text-xl font-display font-bold text-white">Top Modelos Vendidos</h3>
+                        <p class="text-sm text-gray-400 mt-1">Quais modelos geram mais receita?</p>
+                    </div>
+                    <div class="bg-white/5 p-2 rounded-lg"><i class="fa-solid fa-car text-emerald-400"></i></div>
+                </div>
+                <div class="relative h-72 w-full">
+                    <canvas id="modelsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart: Pagamento -->
+            <div class="glass-card canva-block p-6 flex flex-col">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h3 class="text-xl font-display font-bold text-white">Formas de Pagamento</h3>
+                        <p class="text-sm text-gray-400 mt-1">Como os clientes estão pagando</p>
+                    </div>
+                    <div class="bg-white/5 p-2 rounded-lg"><i class="fa-solid fa-credit-card text-canva-purple"></i></div>
+                </div>
+                <div class="relative h-72 w-full flex-grow flex items-center justify-center">
+                    <canvas id="paymentChart"></canvas>
+                </div>
+            </div>
+
+        </section>
+
+        <section class="fade-up delay-300">
+            <div class="glass-card canva-block rounded-2xl overflow-hidden border border-white/10">
+                <div class="p-6 border-b border-white/10 bg-gradient-to-r from-zinc-900 to-zinc-800 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-display font-bold text-white">Higienização de Dados (Data Hygiene)</h2>
+                        <p class="text-sm text-gray-400 mt-1">Demonstração de tratamento da coluna <code class="bg-black px-1 rounded text-porsche-red">sale_date</code> para <code class="bg-black px-1 rounded text-emerald-400">SaleDateSanitized</code></p>
+                    </div>
+                    <div class="hidden sm:block text-right">
+                        <span class="inline-block bg-red-500/20 text-red-400 text-xs font-bold px-3 py-1 rounded-full border border-red-500/30">
+                            24% Taxa de Erro Tratada
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto p-4">
+                    <table class="w-full text-left text-sm text-gray-300">
+                        <thead class="text-xs uppercase text-gray-500 bg-black/20">
+                            <tr>
+                                <th class="px-6 py-4 font-bold rounded-l-lg w-16 text-center">ID</th>
+                                <th class="px-6 py-4 font-bold border-l border-white/5 bg-red-950/20 text-red-200">Dado Original Bruto (Com Erro)</th>
+                                <th class="px-6 py-4 font-bold border-l border-r border-white/5 bg-emerald-950/20 text-emerald-200">Dado Tratado (SaleDateSanitized)</th>
+                                <th class="px-6 py-4 font-bold rounded-r-lg">Motivo / Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="space-y-2">
+                            <!-- Exemplos Estáticos Baseados no Pedido do Usuário para ilustrar o ANTES e DEPOIS da higienização -->
+                            <tr class="hover:bg-white/5 transition-colors border-b border-white/5">
+                                <td class="px-6 py-4 text-center font-mono text-gray-500">6</td>
+                                <td class="px-6 py-4 bg-red-950/10 font-mono text-red-400/70 line-through decoration-red-500">2024-02-30</td>
+                                <td class="px-6 py-4 bg-emerald-950/10 font-mono font-bold text-red-500">INVALID</td>
+                                <td class="px-6 py-4"><span class="bg-red-500/10 text-red-400 px-2 py-1 rounded text-xs border border-red-500/20">Data Inexistente (30/Fev)</span></td>
+                            </tr>
+                            <tr class="hover:bg-white/5 transition-colors border-b border-white/5">
+                                <td class="px-6 py-4 text-center font-mono text-gray-500">7</td>
+                                <td class="px-6 py-4 bg-red-950/10 font-mono text-gray-400">03/14/2024</td>
+                                <td class="px-6 py-4 bg-emerald-950/10 font-mono font-bold text-emerald-400">2024-03-14</td>
+                                <td class="px-6 py-4"><span class="bg-blue-500/10 text-blue-400 px-2 py-1 rounded text-xs border border-blue-500/20">Convertido para ISO-8601</span></td>
+                            </tr>
+                            <tr class="hover:bg-white/5 transition-colors border-b border-white/5">
+                                <td class="px-6 py-4 text-center font-mono text-gray-500">9</td>
+                                <td class="px-6 py-4 bg-red-950/10 font-mono text-red-400/70 line-through decoration-red-500">April 31st, 2024</td>
+                                <td class="px-6 py-4 bg-emerald-950/10 font-mono font-bold text-red-500">INVALID</td>
+                                <td class="px-6 py-4"><span class="bg-red-500/10 text-red-400 px-2 py-1 rounded text-xs border border-red-500/20">Abril tem 30 dias</span></td>
+                            </tr>
+                            <tr class="hover:bg-white/5 transition-colors border-b border-white/5">
+                                <td class="px-6 py-4 text-center font-mono text-gray-500">10</td>
+                                <td class="px-6 py-4 bg-red-950/10 font-mono text-gray-400">2024-05-22 00:00:00</td>
+                                <td class="px-6 py-4 bg-emerald-950/10 font-mono font-bold text-emerald-400">2024-05-22</td>
+                                <td class="px-6 py-4"><span class="bg-blue-500/10 text-blue-400 px-2 py-1 rounded text-xs border border-blue-500/20">Removido Timestamp (00:00)</span></td>
+                            </tr>
+                            <tr class="hover:bg-white/5 transition-colors border-b border-white/5">
+                                <td class="px-6 py-4 text-center font-mono text-gray-500">13</td>
+                                <td class="px-6 py-4 bg-red-950/10 font-mono text-red-400/70 line-through decoration-red-500">2024/15/07</td>
+                                <td class="px-6 py-4 bg-emerald-950/10 font-mono font-bold text-red-500">INVALID</td>
+                                <td class="px-6 py-4"><span class="bg-red-500/10 text-red-400 px-2 py-1 rounded text-xs border border-red-500/20">Mês 15 inválido</span></td>
+                            </tr>
+                            <tr class="hover:bg-white/5 transition-colors">
+                                <td class="px-6 py-4 text-center font-mono text-gray-500">22</td>
+                                <td class="px-6 py-4 bg-red-950/10 font-mono text-red-400/70 line-through decoration-red-500">01/32/2025</td>
+                                <td class="px-6 py-4 bg-emerald-950/10 font-mono font-bold text-red-500">INVALID</td>
+                                <td class="px-6 py-4"><span class="bg-red-500/10 text-red-400 px-2 py-1 rounded text-xs border border-red-500/20">Dia 32 inválido</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-12 fade-up delay-300">
+            <!-- VALE A PENA -->
+            <div class="canva-block bg-gradient-to-br from-emerald-950/40 to-black border border-emerald-900/50 p-8 relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-6 opacity-10">
+                    <i class="fa-solid fa-thumbs-up text-8xl text-emerald-500"></i>
+                </div>
+                <h3 class="text-2xl font-display font-bold text-emerald-400 mb-6 flex items-center gap-3">
+                    <i class="fa-solid fa-circle-check"></i> O QUE VALE A PENA
+                </h3>
+                <ul class="space-y-5 text-gray-300">
+                    <li class="flex gap-4">
+                        <div class="mt-1 bg-emerald-500/20 p-1.5 rounded text-emerald-400 h-fit"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                        <div><strong class="text-white block text-base mb-1">Foco nos High-Ticket 911 e Taycan</strong> Os modelos 911 (Dakar, Turbo S, GT3, etc.) e a linha Taycan puxam a rentabilidade máxima da operação.</div>
+                    </li>
+                    <li class="flex gap-4">
+                        <div class="mt-1 bg-emerald-500/20 p-1.5 rounded text-emerald-400 h-fit"><i class="fa-solid fa-map-location-dot"></i></div>
+                        <div><strong class="text-white block text-base mb-1">Investimento Massivo em CA e TX</strong> Os estados da Califórnia e Texas concentram o maior volume consumidor e devem receber a maior fatia de marketing.</div>
+                    </li>
+                    <li class="flex gap-4">
+                        <div class="mt-1 bg-emerald-500/20 p-1.5 rounded text-emerald-400 h-fit"><i class="fa-solid fa-building-columns"></i></div>
+                        <div><strong class="text-white block text-base mb-1">Pagamentos Alternativos</strong> Vendas em Criptomoedas e Transferências Bancárias Diretas facilitam fechamentos rápidos de hiperluxo sem fricção de crédito.</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- NÃO VALE A PENA -->
+            <div class="canva-block bg-gradient-to-br from-red-950/40 to-black border border-red-900/50 p-8 relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-6 opacity-10">
+                    <i class="fa-solid fa-thumbs-down text-8xl text-porsche-red"></i>
+                </div>
+                <h3 class="text-2xl font-display font-bold text-porsche-red mb-6 flex items-center gap-3">
+                    <i class="fa-solid fa-triangle-exclamation"></i> O QUE NÃO VALE A PENA
+                </h3>
+                <ul class="space-y-5 text-gray-300">
+                    <li class="flex gap-4">
+                        <div class="mt-1 bg-red-500/20 p-1.5 rounded text-porsche-red h-fit"><i class="fa-solid fa-bullseye"></i></div>
+                        <div><strong class="text-white block text-base mb-1">Marketing Descentralizado</strong> Alocar verba em regiões de baixíssimo giro (como AK ou OK) traz ROI quase nulo comparado às metrópoles.</div>
+                    </li>
+                    <li class="flex gap-4">
+                        <div class="mt-1 bg-red-500/20 p-1.5 rounded text-porsche-red h-fit"><i class="fa-solid fa-file-circle-xmark"></i></div>
+                        <div><strong class="text-white block text-base mb-1">Inserção Manual no CRM</strong> Exatamente 24% das datas da base bruta continham erros severos (INVALID). É crucial automatizar a coleta para não quebrar a sazonalidade.</div>
+                    </li>
+                    <li class="flex gap-4">
+                        <div class="mt-1 bg-red-500/20 p-1.5 rounded text-porsche-red h-fit"><i class="fa-solid fa-ban"></i></div>
+                        <div><strong class="text-white block text-base mb-1">Fricção e Cancelamentos</strong> Processos longos de aprovação de crédito ou logística causam status "Cancelled", perdendo transações de alto valor.</div>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // Configurações globais do Chart.js para combinar com o design escuro
+        Chart.defaults.color = '#a1a1aa';
+        Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+        Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.05)';
+        Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(26, 26, 30, 0.95)';
+        Chart.defaults.plugins.tooltip.titleColor = '#fff';
+        Chart.defaults.plugins.tooltip.padding = 12;
+        Chart.defaults.plugins.tooltip.borderColor = 'rgba(255,255,255,0.1)';
+        Chart.defaults.plugins.tooltip.borderWidth = 1;
+        Chart.defaults.plugins.tooltip.cornerRadius = 8;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            
+            // 1. DADOS BRUTOS (Fornecidos no prompt)
+            const rawCSV = `sale_id,sale_date,customer_name,porsche_model,model_year,sale_price,vehicle_mileage,payment_method,city,state,salesperson,delivery_status
+6,INVALID,Michael Adams,718 Cayman,2022,79500.0,9800,Credit Card,Boston,MA,Kevin,Delivered
+7,2024-03-14,Sophia Miller,911 Turbo S,2024,235000.0,1200,Wire Transfer,Seattle,WA,Amanda Scott,Delivered
+8,2024-04-18,Daniel-Jones,Cayenne Coupe,2023,112750.0,6400,Financing,Austin,TX,Brian Hall,In Transit
+9,INVALID,Olivia Brown,Macan S,2021,68900.0,28,Cash,Denver,CO,Jessica,Pending
+10,2024-05-22,Ethan Wilson,Taycan 4S,2024,121000.0,0,Bank Transfer,Los Angeles,CA,Thomas King,Delivered
+11,2024-08-06,Ava Martinez,Panamera 4,2023,104500.0,14500,Credit Card,Miami,FL,Lisa Ray,Cancelled
+12,2024-07-11,Noah Davis,911 Carrera S,2020,96300.0,41000,Lease,New York,NY,Mark Evans,Delivered
+13,INVALID,Isabella Garcia,Cayenne E-Hybrid,2022,89750.0,11744,Wire Transfer,San Diego,CA,Nancy Reed,Pending Approval
+14,2024-08-19,Liam Rodriguez,718 Boxster,2021,73500.0,22300,Debit Card,Chicago,IL,George Bell,Shipped
+15,2024-09-02,Mia Hernandez,Macan GTS,2024,95000.0,3500,Financing,Phoenix,AZ,Helen Brooks,In Transit
+16,2024-09-17,James Lopez,Taycan Turbo,2023,153200.5,11,ACH Payment,Dallas,TX,Samuel Price,Delivered
+17,INVALID,Charlotte Young,911 GT3,2024,241000.0,750,Wire Transfer,Las Vegas,NV,Peter Ford,Pending
+18,2024-05-11,Benjamin Allen,Panamera Turbo S,2022,132000.0,19250,Cash,San Jose,CA,Angela Green,Delivered
+19,2024-12-12,Amelia King,Cayenne Turbo GT,2024,188000.0,2100,Crypto Payment,Houston,TX,Victor Stone,Awaiting Delivery
+20,2024-12-25,Lucas Wright,911 Carrera Cabriolet,2023,127800.0,12000,Credit Card,Atlanta,GA,Rachel Turner,Delivered
+21,2025-01-06,Harper Scott,Macan,2021,58900.0,33700,Bank Transfer,Orlando,FL,Chris Moore,Pending
+22,INVALID,Henry Torres,718 Spyder RS,2024,164000.0,900,Financing,Portland,OR,Laura Hill,In Transit
+23,2025-02-14,Evelyn Nguyen,Taycan Cross Turismo,2023,118500.0,7800,Wire Transfer,Charlotte,NC,Martin Young,Delivered
+24,INVALID,Alexander Flores,Cayenne S,2022,91300.0,16000,Credit Card,Nashville,TN,Diana Cooper,Pending
+25,2025-03-21,Abigail Carter,911 Targa 4S,2024,158750.0,2500,Lease,Minneapolis,MN,Steve Gray,Delivered
+26,2025-03-28,Jack Mitchell,Panamera,2020,72000.0,49000,Bank Transfer,Philadelphia,PA,Olivia Ross,Cancelled
+27,2025-04-09,Emily Perez,Macan Electric,2025,86500.0,0,Wire Transfer,San Antonio,TX,Patrick Wood,Delivered
+28,INVALID,William Roberts,911 Dakar,2024,270000.0,1050,Cash,Salt Lake City,UT,Karen Diaz,Awaiting Pickup
+29,2025-05-12,Sofia Turner,Taycan GTS,2023,139000.0,6250,Financing,Raleigh,NC,Justin Cox,In Transit
+30,2025-06-18,Mason Phillips,Cayenne,2021,76800.0,38400,Credit Card,Detroit,MI,Betty Ward,Delivered
+31,INVALID,Ella Campbell,718 Cayman GT4 RS,2024,173600.0,400,Wire Transfer,Columbus,OH,Gary Reed,Pending
+32,2025-07-07,Logan Parker,911 Carrera GTS,2022,119900.0,13600,Cash,Indianapolis,IN,Maria Foster,Delivered
+33,2025-07-22,Grace Evans,Panamera 4 E-Hybrid,2023,109250.0,8900,Lease,Fort Worth,TX,Harold Bennett,In Transit
+34,2025-08-14,Jacob Edwards,Macan T,2022,82000.0,21750,Wire Transfer,Jacksonville,FL,Teresa Cook,Delivered
+35,2025-09-01,Victoria Collins,Taycan Turbo S,2025,214000.0,0,Crypto Payment,San Diego,CA,Frank Morgan,Pending Review
+36,INVALID,Andrew Simmons,911 Carrera,2024,124500.0,4800,Credit Card,Tampa,FL,Natalie,Delivered
+37,2025-09-18,Chloe Bennett,Cayenne S,2023,98200.0,12200,Bank Transfer,Sacramento,CA,Eric Woods,Pending
+38,2025-10-04,Ryan-Cooper,Macan,2022,67500.0,24100,Financing,Cleveland,OH,Patricia Fox,Delivered
+39,2025-10-12,Hannah Reed,Taycan,2025,116900.0,0,Wire Transfer,Milwaukee,WI,Alan Price,In Transit
+40,2025-10-29,Dylan Parker,Panamera 4S,2024,112000.0,10,Cash,Kansas City,MO,Sandra Hill,Delivered
+41,2025-02-11,Lily Coleman,718 Boxster,2021,74000.0,31000,Debit Card,Omaha,NE,Victor Lee,Cancelled
+42,2025-11-16,Nathan Hughes,911 Turbo,2024,198300.0,2400,Wire Transfer,Albuquerque,NM,Monica,Awaiting Delivery
+43,INVALID,Zoe Foster,Cayenne Coupe,2023,103750.0,6773,Wire Transfer,Tucson,AZ,Gregory Adams,Pending Approval
+44,INVALID,Caleb Ward,Macan GTS,2024,93600.0,5800,Financing,Fresno,CA,Laura West,Shipped
+45,2025-12-07,Stella Brooks,Taycan 4S,2025,129000.0,0,ACH Payment,Virginia Beach,VA,Henry King,In Transit
+46,2025-12-22,Owen Bryant,Panamera Turbo,2022,136000.0,18400,Credit Card,Colorado Springs,CO,Amber Clark,Delivered
+47,INVALID,Nora Simmons,911 GT3 RS,2024,286500.0,700,Wire Transfer,Arlington,TX,Peter Lane,Pending
+48,2026-01-08,Isaac Butler,Cayenne E-Hybrid,2023,92800.0,15000,Lease,Bakersfield,CA,Grace Morris,Delivered
+49,2026-01-15,Leah Henderson,Macan T,2022,72400.0,19750,Cash,Mesa,AZ,Kyle Perry,Awaiting Pickup
+50,2026-01-28,Christian Bailey,Taycan Turbo,2025,158500.0,3200,Crypto Payment,Atlanta,GA,Megan Reed,Delivered
+51,2026-02-03,Audrey Russell,718 Cayman,2021,69900.0,27600,Bank Transfer,Long Beach,CA,Carl Simmons,Pending
+52,INVALID,Hunter Griffin,911 Targa 4,2024,141250.0,2100,Financing,Oakland,CA,Linda Cole,In Transit
+53,2026-02-19,Scarlett Diaz,Panamera,2020,71500.0,52000,Wire Transfer,Tulsa,OK,Martin Brooks,Delivered
+54,2026-02-25,Eli Jenkins,Cayenne Turbo,2023,146800.0,11300,Credit Card,Wichita,KS,Diana Long,Pending
+55,2026-03-01,Madison Powell,Macan Electric,2025,89700.0,0,Lease,New Orleans,LA,Steve Ross,Delivered
+56,2026-03-14,Adrian Sanders,911 Carrera S,2022,104600.0,15900,Bank Transfer,Honolulu,HI,Olivia Cruz,Cancelled
+57,INVALID,Penelope Barnes,Taycan GTS,2024,142000.0,6600,Wire Transfer,Anaheim,CA,Patrick Wood,Delivered
+58,2026-04-08,Nolan Fisher,Cayenne,2021,78400.0,40250,Cash,Henderson,NV,Karen Stone,Awaiting Review
+59,INVALID,Layla Marshall,718 Spyder RS,2025,169000.0,850,Financing,Lexington,KY,Justin Fox,In Transit
+60,2026-04-21,Gabriel Owens,911 Dakar,2024,268900.0,1400,Credit Card,Riverside,CA,Betty James,Delivered
+61,2026-04-29,Victoria Hart,Panamera 4,2023,101300.0,12700,Wire Transfer,Corpus Christi,TX,Gary Price,Pending
+62,2026-05-05,Julian Stone,Macan S,2021,66750.0,29800,Cash,St. Louis,MO,Maria Green,Delivered
+63,2026-05-14,Brooklyn Webb,Taycan Cross Turismo,2024,127900.0,7500,Lease,Pittsburgh,PA,Harold Young,In Transit
+64,2026-05-23,Aaron Kim,Cayenne Turbo GT,2025,200000.0,1950,Wire Transfer,Cincinnati,OH,Teresa Ward,Delivered
+65,2026-06-02,Claire Watson,911 Carrera Cabriolet,2023,132000.0,8800,Crypto Payment,Anchorage,AK,Frank Reed,Pending Review
+66,2026-06-15,Sebastian Brooks,718 Cayman GT4 RS,2024,176400.0,600,Credit Card,Plano,TX,Angela Moore,Delivered
+67,INVALID,Bella Ramirez,Panamera 4 E-Hybrid,2022,108500.0,16200,Bank Transfer,Newark,NJ,Rachel West,Cancelled
+68,2026-07-07,Miles Peterson,Macan,2021,59000.0,36000,Financing,Greensboro,NC,Thomas Fox,Awaiting Delivery
+69,2026-07-20,Skylar Rogers,Taycan Turbo S,2025,218000.0,0,Wire Transfer,Lincoln,NE,Lisa Dunn,Pending
+70,INVALID,Dominic Kelly,Cayenne S,2024,99950.0,5300,Debit Card,Jersey City,NJ,Brian Allen,Delivered
+71,2026-04-08,Lucy Howard,911 Carrera GTS,2024,121750.0,5872,Credit Card,Chandler,AZ,George Hall,Delivered
+72,2026-08-18,Everett Cox,718 Boxster GTS,2023,91500.0,13300,Lease,Reno,NV,Helen King,Shipped
+73,2026-08-31,Maya Rivera,Panamera Turbo S,2022,134000.0,20100,Wire Transfer,Buffalo,NY,Samuel Price,In Transit
+74,2026-09-09,Connor Ward,Macan GTS,2024,96800.0,0,ACH Payment,Durham,NC,Peter Ford,Delivered
+75,2026-09-17,Eliana Bell,Taycan 4S,2025,131600.0,2900,Wire Transfer,Laredo,TX,Angela Green,Pending Approval
+76,2026-09-28,Cameron Murphy,Cayenne E-Hybrid,2023,94300.0,13100,Cash,Madison,WI,Victor Stone,Delivered
+77,2026-10-06,Ariana Cook,911 Turbo S,2025,242000.0,1100,Crypto Payment,Lubbock,TX,Rachel Turner,Awaiting Pickup
+78,2026-10-16,Wesley Morgan,718 Cayman S,2022,82750.0,22500,Credit Card,Toledo,OH,Chris Moore,Cancelled
+79,2026-10-29,Naomi Peterson,Macan Electric,2026,91300.0,0,Wire Transfer,Irvine,CA,Laura Hill,Delivered
+80,2026-11-03,Jason Perry,Panamera,2021,79900.0,44800,Financing,Garland,TX,Martin Young,Pending
+81,INVALID,Riley Flores,Cayenne Coupe,2024,111000.0,6700,Bank Transfer,Irving,TX,Diana Cooper,In Transit
+82,2026-12-11,Hazel Long,911 Targa 4S,2023,156500.0,4200,Cash,Chesapeake,VA,Steve Gray,Delivered
+83,2026-12-24,Easton Bailey,Taycan,2025,119900.0,1250,Lease,Scottsdale,AZ,Olivia Ross,Pending
+84,INVALID,Aurora Cooper,Macan T,2022,73200.0,18600,Wire Transfer,Norfolk,VA,Patrick Wood,Delivered
+85,2026-12-28,Colton Richardson,911 GT3,2024,224000.0,3000,Wire Transfer,Boise,ID,Karen Diaz,Awaiting Delivery
+86,2027-01-15,Mason Stewart,911 Carrera,2024,126900.0,7200,Credit Card,Orlando,FL,Kevin Brown,Delivered
+87,2027-01-29,Harper Reed,Cayenne,2023,84500.0,21400,Bank Transfer,San Jose,CA,Amanda Lee,Pending
+88,2027-02-11,Tyler-Morris,Macan S,2022,69800.0,26300,Financing,Tampa,FL,Brian Hall,Delivered
+89,INVALID,Natalie Brooks,Taycan 4S,2025,132700.0,0,Wire Transfer,Denver,CO,Jessica White,In Transit
+90,2027-03-05,Brandon Parker,Panamera,2021,81000.0,42,Cash,Austin,TX,Thomas King,Delivered
+91,2027-03-18,Lauren Foster,718 Cayman,2023,78900.0,17500,Debit Card,Seattle,WA,Victor Lee,Cancelled
+92,2027-04-02,Adam Hughes,911 Turbo S,2026,249300.0,900,Wire Transfer,Boston,MA,Monica Green,Awaiting Delivery
+93,INVALID,Julia Coleman,Cayenne Coupe,2024,108750.0,5530,Wire Transfer,Phoenix,AZ,Gregory Adams,Pending Approval
+94,INVALID,Caleb Simmons,Macan Electric,2026,92600.0,0,Financing,Chicago,IL,Laura West,Shipped
+95,2027-05-12,Ariana Price,Taycan Turbo,2025,164000.0,0,ACH Payment,Dallas,TX,Henry King,In Transit
+96,2027-05-27,Owen Rivera,Panamera 4S,2024,119000.0,13400,Credit Card,San Francisco,CA,Amber Clark,Delivered
+97,INVALID,Nora Bennett,911 GT3,2026,232500.0,1700,Wire Transfer,Las Vegas,NV,Peter Lane,Pending
+98,2027-06-18,Isaac Turner,Cayenne E-Hybrid,2023,96800.0,14000,Lease,Charlotte,NC,Grace Morris,Delivered
+99,2027-07-03,Leah Scott,Macan T,2022,74400.0,20750,Cash,Mesa,AZ,Kyle Perry,Awaiting Pickup
+100,2027-07-22,Christian Bailey,Taycan GTS,2025,148500.0,5200,Crypto Payment,Atlanta,GA,Megan Reed,Delivered
+101,2027-08-08,Audrey Russell,718 Boxster,2021,71900.0,29600,Bank Transfer,Long Beach,CA,Carl Simmons,Pending
+102,INVALID,Hunter Griffin,911 Targa 4,2024,143250.0,3100,Financing,Oakland,CA,Linda Cole,In Transit
+103,2027-09-19,Scarlett Diaz,Panamera Turbo,2020,137500.0,48000,Wire Transfer,Tulsa,OK,Martin Brooks,Delivered
+104,2027-09-25,Eli Jenkins,Cayenne Turbo GT,2025,204800.0,3300,Credit Card,Wichita,KS,Diana Long,Pending
+105,2027-10-01,Madison Powell,911 Dakar,2024,271700.0,1050,Lease,New Orleans,LA,Steve Ross,Delivered`;
+
+            let allData = [];
+            let uniqueModels = new Set();
+            let uniqueCities = new Set();
+            let uniqueSellers = new Set();
+            
+            // Instâncias globais dos gráficos
+            let evolutionChartInstance = null;
+            let cityChartInstance = null;
+            let modelsChartInstance = null;
+            let paymentChartInstance = null;
+
+            const rows = rawCSV.trim().split('\n').slice(1);
+            
+            rows.forEach(row => {
+                const cols = row.split(',');
+                if (cols.length < 12) return;
+                
+                const date = cols[1];
+                const modelRaw = cols[3];
+                
+                let baseModel = modelRaw.replace(/4S|Turbo S|Turbo GT|Turbo|S|GTS|RS|GT3|GT4|Cabriolet|Coupe|E-Hybrid|Cross Turismo|Electric/g, '').trim();
+                if(baseModel.includes('911')) baseModel = '911';
+                if(baseModel.includes('718')) baseModel = '718';
+                
+                const item = {
+                    id: cols[0],
+                    date: date,
+                    modelRaw: modelRaw,
+                    baseModel: baseModel,
+                    price: parseFloat(cols[5]),
+                    payment: cols[7],
+                    city: cols[8],
+                    state: cols[9],
+                    salesperson: cols[10],
+                    status: cols[11]
+                };
+                
+                allData.push(item);
+                
+                uniqueModels.add(baseModel);
+                uniqueCities.add(item.city);
+                uniqueSellers.add(item.salesperson);
+            });
+
+            const fillSelect = (id, set) => {
+                const select = document.getElementById(id);
+                Array.from(set).sort().forEach(val => {
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.textContent = val;
+                    select.appendChild(opt);
+                });
+            };
+
+            fillSelect('filter-model', uniqueModels);
+            fillSelect('filter-city', uniqueCities);
+            fillSelect('filter-seller', uniqueSellers);
+
+            const fmtNum = (num) => '$' + (num/1000000).toFixed(2) + 'M';
+            const fmtK = (num) => '$' + (num/1000).toFixed(2) + 'K';
+
+            const renderDashboard = (data) => {
+                let totalRevenue = 0;
+                let deliveredRevenue = 0;
+                let deliveredCount = 0;
+                let validDatesCount = 0;
+                
+                const sellers = {};
+                const cityData = {};
+                const modelsData = {};
+                const paymentData = {};
+                const evolutionData = {}; 
+
+                data.forEach(d => {
+                    totalRevenue += d.price;
+                    
+                    if(d.status === 'Delivered') {
+                        deliveredRevenue += d.price;
+                        deliveredCount++;
+                    }
+
+                    if(d.date !== 'INVALID') {
+                        validDatesCount++;
+                        const year = d.date.split('-')[0];
+                        if(!evolutionData[year]) evolutionData[year] = {rev: 0, vol: 0};
+                        evolutionData[year].rev += d.price;
+                        evolutionData[year].vol += 1;
+                    }
+
+                    // Vendedores
+                    if(!sellers[d.salesperson]) sellers[d.salesperson] = { vol: 0, rev: 0 };
+                    sellers[d.salesperson].vol += 1;
+                    sellers[d.salesperson].rev += d.price;
+
+                    // Cidades (Ajustado via pedido)
+                    if(!cityData[d.city]) cityData[d.city] = { rev: 0, vol: 0 };
+                    cityData[d.city].rev += d.price;
+                    cityData[d.city].vol += 1;
+
+                    // Modelos
+                    if(!modelsData[d.baseModel]) modelsData[d.baseModel] = 0;
+                    modelsData[d.baseModel] += d.price;
+
+                    // Pagamento
+                    if(!paymentData[d.payment]) paymentData[d.payment] = 0;
+                    paymentData[d.payment] += d.price;
+                });
+
+                // Atualizar KPIs Base
+                document.getElementById('kpi-revenue').innerText = data.length > 0 ? fmtNum(totalRevenue) : '$0.00M';
+                document.getElementById('kpi-tx-count').innerText = data.length;
+                document.getElementById('kpi-avg-ticket').innerText = data.length > 0 ? fmtK(totalRevenue / data.length) : '$0K';
+                document.getElementById('kpi-delivered-revenue').innerText = data.length > 0 ? fmtNum(deliveredRevenue) : '$0.00M';
+                document.getElementById('kpi-delivered-count').innerText = deliveredCount;
+                
+                const qualityPct = data.length > 0 ? ((validDatesCount / data.length) * 100).toFixed(0) : 0;
+                document.getElementById('kpi-quality-pct').innerText = qualityPct + '%';
+                document.getElementById('kpi-valid-dates').innerText = validDatesCount;
+
+                // Ranking Vendedores Dinâmico
+                const sellersArr = Object.keys(sellers).map(k => ({ name: k, ...sellers[k] }));
+                const topRev = [...sellersArr].sort((a,b) => b.rev - a.rev)[0] || {name: 'N/A', rev: 0, vol: 0};
+                const topVol = [...sellersArr].sort((a,b) => b.vol - a.vol)[0] || {name: 'N/A', rev: 0, vol: 0};
+                
+                document.getElementById('top-revenue-name').innerText = topRev.name;
+                document.getElementById('top-revenue-val').innerText = topRev.rev.toLocaleString('en-US', {style:'currency', currency:'USD'});
+                
+                document.getElementById('top-volume-name').innerText = topVol.name;
+                document.getElementById('top-volume-val').innerText = topVol.vol;
+
+                const tbody = document.getElementById('sellers-tbody');
+                tbody.innerHTML = '';
+                const sortedSellers = [...sellersArr].sort((a,b) => b.rev - a.rev);
+                
+                sortedSellers.forEach((s, index) => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-white/5 transition-colors";
+                    
+                    let posBadge = `<span class="text-gray-500 font-bold">${index + 1}º</span>`;
+                    if(index === 0) posBadge = `<div class="w-6 h-6 rounded-full bg-canva-yellow text-black flex items-center justify-center font-bold text-xs"><i class="fa-solid fa-trophy text-[10px]"></i></div>`;
+                    if(index === 1) posBadge = `<div class="w-6 h-6 rounded-full bg-gray-300 text-black flex items-center justify-center font-bold text-xs">2</div>`;
+                    if(index === 2) posBadge = `<div class="w-6 h-6 rounded-full bg-orange-400 text-black flex items-center justify-center font-bold text-xs">3</div>`;
+
+                    tr.innerHTML = `
+                        <td class="px-4 py-3">${posBadge}</td>
+                        <td class="px-4 py-3 font-medium text-white">${s.name} ${s.name === topVol.name && s.vol > 0 ? '<span class="ml-2 bg-blue-500/20 text-blue-400 text-[10px] px-1.5 py-0.5 rounded uppercase">Líder Vol</span>' : ''}</td>
+                        <td class="px-4 py-3 text-center text-gray-300">${s.vol}</td>
+                        <td class="px-4 py-3 text-right font-mono text-emerald-400">${s.rev.toLocaleString('en-US', {style:'currency', currency:'USD'})}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                const years = Object.keys(evolutionData).sort();
+                const evolLabels = years;
+                const evolRev = years.map(y => evolutionData[y].rev);
+                const evolVol = years.map(y => evolutionData[y].vol);
+
+                if(evolutionChartInstance) evolutionChartInstance.destroy();
+                evolutionChartInstance = new Chart(document.getElementById('evolutionChart').getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: evolLabels,
+                        datasets: [
+                            {
+                                label: 'Faturamento (USD)', data: evolRev,
+                                borderColor: '#D5001C', backgroundColor: 'rgba(213, 0, 28, 0.5)',
+                                borderWidth: 4, pointBackgroundColor: '#fff', pointRadius: 5, tension: 0.4, yAxisID: 'y'
+                            },
+                            {
+                                label: 'Volume Vendido (Unidades)', type: 'bar', data: evolVol,
+                                backgroundColor: 'rgba(139, 61, 255, 0.2)', borderRadius: 4, yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom', labels: { color: '#a1a1aa' } } },
+                        scales: {
+                            y: { type: 'linear', position: 'left', ticks: { callback: v => '$' + (v/1000000).toFixed(1) + 'M', color: '#a1a1aa' } },
+                            y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { stepSize: 1, color: '#8b3dff' } }
+                        }
+                    }
+                });
+
+                // Chart: Cidades
+                const sortedCities = Object.keys(cityData).map(k => ({city: k, ...cityData[k]})).sort((a,b) => b.rev - a.rev).slice(0,5);
+                if(cityChartInstance) cityChartInstance.destroy();
+                cityChartInstance = new Chart(document.getElementById('statesChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: sortedCities.map(s => s.city),
+                        datasets: [{
+                            label: 'Faturamento', data: sortedCities.map(s => s.rev),
+                            backgroundColor: ['#00c4cc', '#009ba1', '#007175', '#00484a', '#001e1f'], borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        const st = sortedCities[ctx.dataIndex];
+                                        return [` Valor: $${(st.rev/1000000).toFixed(2)}M`, ` Vendas: ${st.vol} veículos`];
+                                    }
+                                }
+                            }
+                        },
+                        scales: { x: { ticks: { callback: v => '$' + (v/1000000).toFixed(1) + 'M' } } }
+                    }
+                });
+
+                // Chart: Modelos
+                const sortedModels = Object.keys(modelsData).map(k => ({model: k, rev: modelsData[k]})).sort((a,b) => b.rev - a.rev).slice(0,5);
+                if(modelsChartInstance) modelsChartInstance.destroy();
+                modelsChartInstance = new Chart(document.getElementById('modelsChart').getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: sortedModels.map(m => m.model),
+                        datasets: [{ data: sortedModels.map(m => m.rev), backgroundColor: '#10b981', borderRadius: 6 }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { ticks: { callback: v => '$' + (v/1000000).toFixed(1) + 'M' } } }
+                    }
+                });
+
+                // Chart: Pagamento
+                if(paymentChartInstance) paymentChartInstance.destroy();
+                paymentChartInstance = new Chart(document.getElementById('paymentChart').getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(paymentData),
+                        datasets: [{
+                            data: Object.keys(paymentData).map(k => paymentData[k]),
+                            backgroundColor: ['#D5001C', '#8b3dff', '#00c4cc', '#ffc82c', '#10b981', '#3f3f46'], borderWidth: 0, hoverOffset: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false, cutout: '75%',
+                        plugins: {
+                            legend: { position: 'right', labels: { color: '#d4d4d8', usePointStyle: true, padding: 15 } },
+                            tooltip: { callbacks: { label: ctx => ' $' + (ctx.raw/1000000).toFixed(2) + 'M' } }
+                        }
+                    }
+                });
+            };
+
+            const applyFilters = () => {
+                const fStart = document.getElementById('filter-start').value;
+                const fEnd = document.getElementById('filter-end').value;
+                const fModel = document.getElementById('filter-model').value;
+                const fCity = document.getElementById('filter-city').value;
+                const fSeller = document.getElementById('filter-seller').value;
+
+                const filtered = allData.filter(d => {
+                    let match = true;
+                    
+                    if (fModel && d.baseModel !== fModel) match = false;
+                    if (fCity && d.city !== fCity) match = false;
+                    if (fSeller && d.salesperson !== fSeller) match = false;
+                    
+                    if (fStart || fEnd) {
+                        if (d.date === 'INVALID') {
+                            match = false; // Ignora as datas inválidas no filtro
+                        } else {
+                            const dYear = parseInt(d.date.split('-')[0], 10);
+                            if (fStart && dYear < parseInt(fStart, 10)) match = false;
+                            if (fEnd && dYear > parseInt(fEnd, 10)) match = false;
+                        }
+                    }
+                    
+                    return match;
+                });
+
+                document.getElementById('sync-badge-text').innerText = `Dados Filtrados (${filtered.length} Regs)`;
+                renderDashboard(filtered);
+            };
+
+            // Adicionar evento 'change' em todos os filtros
+            ['filter-start', 'filter-end', 'filter-model', 'filter-city', 'filter-seller'].forEach(id => {
+                document.getElementById(id).addEventListener('change', applyFilters);
+            });
+
+            // Botão de Limpar
+            document.getElementById('btn-clear-filters').addEventListener('click', () => {
+                document.getElementById('filter-start').value = '';
+                document.getElementById('filter-end').value = '';
+                document.getElementById('filter-model').value = '';
+                document.getElementById('filter-city').value = '';
+                document.getElementById('filter-seller').value = '';
+                applyFilters();
+            });
+
+            // Primeiro render com todos os dados
+            renderDashboard(allData);
+        });
+    </script>
+</body>
+</html>
